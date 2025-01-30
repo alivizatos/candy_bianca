@@ -1,0 +1,11 @@
+{
+    "domain": "candy_bianca",
+    "name": "Candy Bianca Dishwasher",
+    "codeowners": ["@your_github_username"],
+    "version": "1.0.0",
+    "config_flow": true,
+    "documentation": "https://github.com/yourusername/your_repo/blob/main/README.md",
+    "requirements": [],
+    "dependencies": [],
+    "iot_class": "local_polling"
+  }
