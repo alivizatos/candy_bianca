@@ -123,8 +123,8 @@ class CandyBiancaSensor(CoordinatorEntity, SensorEntity):
                     states = {
                         "0": "IDLE",
                         "1": "PRE_WASH",
-                        "2": "WASH",
-                        "3": "RINSE",
+                        "2": "RINSE",
+                        "3": "WASH",
                         "4": "DRYING",
                         "5": "FINISHED",
                     }
