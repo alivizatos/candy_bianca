@@ -37,7 +37,7 @@ class CandyBiancaCoordinator(DataUpdateCoordinator):
             name=f"Candy Bianca {entry.data['name']}",
             update_interval=timedelta(seconds=30),
         )
-        _LOGGER.debug(
+        _LOGGER.info(
             f"Coordinator initialized: {self.name}, update_interval: {self.update_interval}"
         )
 
@@ -46,14 +46,11 @@ class CandyBiancaCoordinator(DataUpdateCoordinator):
         _LOGGER.debug(f"Fetching data for {self._entry.data['name']}")
         try:
             url = f"http://{self._ip_address}/http-read.json?encrypted={'1' if self._encrypted else '0'}"
-            _LOGGER.debug(f"Requesting url: {url}")
 
             response = await self.hass.async_add_executor_job(requests.get, url)
             response.raise_for_status()
-            _LOGGER.debug(f"Response status: {response.status_code}")
 
             hex_data = response.text.strip()
-            _LOGGER.debug(f"Hex data received: {hex_data}")
 
             # XOR Decryption
             if self._encrypted and self._key:
@@ -76,8 +73,6 @@ class CandyBiancaCoordinator(DataUpdateCoordinator):
                     decrypted_data = decrypted_data_bytes.decode(
                         "utf-8", errors="ignore"
                     )
-
-                    _LOGGER.debug(f"Decrypted data after XOR: {decrypted_data}")
                 except Exception as xor_err:
                     _LOGGER.error(f"XOR Decryption Error {xor_err}")
                     return None
@@ -86,7 +81,6 @@ class CandyBiancaCoordinator(DataUpdateCoordinator):
 
             try:
                 self.json_data = json.loads(decrypted_data)
-                _LOGGER.debug(f"JSON data loaded succesfully: {self.json_data}")
                 return self.json_data
             except json.JSONDecodeError:
                 _LOGGER.error("Invalid JSON response")
