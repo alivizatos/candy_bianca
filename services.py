@@ -58,7 +58,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         if not raw_program:
             raise HomeAssistantError(f"Could not untranslate program value: {program}")
 
-        encoded_data = await self._encode_data(raw_program, encrypted, key)
+        encoded_data = await _encode_data(raw_program, encrypted, key)
         if not encoded_data:
             raise HomeAssistantError(f"Could not encode data: {raw_program}")
 
@@ -90,8 +90,23 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         if not program:
             raise HomeAssistantError("program is required")
 
-        entity = hass.states.get(f"sensor.{device_name.replace(' ', '_')}-program")
-        if not entity:
+        # Attempt to find the program sensor by iterating through all entities
+        program_entity_id = None
+        for entity_id in hass.states.async_entity_ids():
+            state = hass.states.get(entity_id)
+            if state and state.entity_id.startswith("sensor."):
+                entity_device_name = state.name.rsplit(" ", 1)[0]
+                if (
+                    entity_device_name == device_name
+                    and state.attributes.get("device_class") == "program"
+                ):
+                    program_entity_id = entity_id
+                    break
+
+        if not program_entity_id:
+            _LOGGER.error(
+                f"Could not find program entity with device name {device_name}. Available entities: {[entity_id for entity_id in hass.states.async_entity_ids()]}"
+            )
             raise HomeAssistantError(
                 f"Could not find program entity with device name {device_name}"
             )
@@ -100,7 +115,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             DOMAIN,
             "send_program",
             {
-                "entity_id": entity.entity_id,  # Changed to use entity.entity_id
+                "device_name": device_name,
                 "program": program,
             },
         )
