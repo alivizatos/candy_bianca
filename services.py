@@ -92,6 +92,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
         # Attempt to find the program sensor by iterating through all entities
         program_entity_id = None
+        program_state = None
         for entity_id in hass.states.async_entity_ids():
             state = hass.states.get(entity_id)
             if state and state.entity_id.startswith("sensor."):
@@ -101,6 +102,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                     and state.attributes.get("device_class") == "program"
                 ):
                     program_entity_id = entity_id
+                    program_state = state
                     break
 
         if not program_entity_id:
@@ -111,14 +113,22 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                 f"Could not find program entity with device name {device_name}"
             )
 
-        await hass.services.async_call(
-            DOMAIN,
-            "send_program",
-            {
-                "device_name": device_name,
-                "program": program,
-            },
-        )
+        if program_state:
+            # Extract the program from the entity's state.
+            program_value = program_state.state
+            _LOGGER.debug(f"Extracted program value: {program_value}")
+            # Call send_program with the extracted program value
+            await hass.services.async_call(
+                DOMAIN,
+                "send_program",
+                {
+                    "device_name": device_name,
+                    "program": program_value,
+                },
+            )
+        else:
+            _LOGGER.error(f"Could not get the state of {program_entity_id}")
+            raise HomeAssistantError(f"Could not get the state of {program_entity_id}")
 
     hass.services.async_register(
         DOMAIN,
@@ -142,11 +152,11 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
         if device_type == "statusDWash":
             program_mapping = {
-                "Intensive 75°C": "P2",
-                "Normal 60°C": "P5",
-                "Eco 45°C": "P8",
-                "Zoom 60°C": "P19",
-                "Pre-Wash": "P12",
+                "Zoom 39mins 60°C": "P19",
+                "P1 75°C": "P2",
+                "Universal 60°C": "P5",
+                "ECO 45°C": "P8",
+                "PreWash 5mins": "P12",
             }
         elif device_type == "statusLavatrice":
             program_mapping = {
