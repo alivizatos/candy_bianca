@@ -22,28 +22,27 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         """Send a new program to the appliance."""
         _LOGGER.debug(f"Service call data: {service.data}")
 
-        device_name = service.data.get("device_name")  # Changed to device_name
+        device_name = service.data.get("device_name")
         program = service.data.get("program")
+        eco = service.data.get("eco", "0")
+        treinuno = service.data.get("treinuno", "0")
+        extradry = service.data.get("extradry", "0")
+        startstop = service.data.get("startstop", "0")
+        metacarico = service.data.get("metacarico", "0")
 
-        if not device_name:  # Changed to device_name
-            raise HomeAssistantError(
-                "device_name is required"
-            )  # Changed to device_name
+        if not device_name:
+            raise HomeAssistantError("device_name is required")
         if not program:
             raise HomeAssistantError("program is required")
 
         coordinator = None
         for coord in hass.data[DOMAIN].values():
-            if (
-                coord._entry.data["name"] == device_name
-            ):  # Find coordinator by device_name
+            if coord._entry.data["name"] == device_name:
                 coordinator = coord
                 break
 
         if not coordinator:
-            raise HomeAssistantError(
-                f"Could not find device with name: {device_name}"
-            )  # Error message updated
+            raise HomeAssistantError(f"Could not find device with name: {device_name}")
 
         ip_address = coordinator._ip_address
         encrypted = coordinator._encrypted
@@ -58,8 +57,8 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         if not raw_program:
             raise HomeAssistantError(f"Could not untranslate program value: {program}")
 
-        # Prepend "Program=" to the raw program
-        data_to_encode = f"Program={raw_program}"
+        # Construct the data string
+        data_to_encode = f"Program={raw_program}&Eco={eco}&TreinUno={treinuno}&ExtraDry={extradry}&StartStop={startstop}&MetaCarico={metacarico}"
         _LOGGER.debug(f"Data to encode: {data_to_encode}")
 
         encoded_data = await _encode_data(data_to_encode, encrypted, key)
@@ -73,6 +72,13 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             response = await hass.async_add_executor_job(requests.get, url)
             response.raise_for_status()
             _LOGGER.debug(f"Response status: {response.status_code}")
+
+            # Log the raw response
+            if response.text:
+                _LOGGER.debug(f"Encrypted response from appliance: {response.text}")
+            else:
+                _LOGGER.debug("Appliance response is empty")
+
         except requests.exceptions.RequestException as e:
             _LOGGER.error(f"Error during request: {e}")
             raise HomeAssistantError(f"Error during request: {e}")
@@ -84,13 +90,16 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         """Set a new program to the appliance."""
         _LOGGER.debug(f"Calling async_set_program: {service.data}")
 
-        device_name = service.data.get("device_name")  # Changed to device_name
+        device_name = service.data.get("device_name")
         program = service.data.get("program")
+        eco = service.data.get("eco", "0")
+        treinuno = service.data.get("treinuno", "0")
+        extradry = service.data.get("extradry", "0")
+        startstop = service.data.get("startstop", "0")
+        metacarico = service.data.get("metacarico", "0")
 
-        if not device_name:  # Changed to device_name
-            raise HomeAssistantError(
-                "device_name is required"
-            )  # Changed to device_name
+        if not device_name:
+            raise HomeAssistantError("device_name is required")
         if not program:
             raise HomeAssistantError("program is required")
 
@@ -121,6 +130,57 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             # Extract the program from the entity's state.
             program_value = program_state.state
             _LOGGER.debug(f"Extracted program value: {program_value}")
+
+            # Render the templates for eco, treinuno and extradry
+            eco_value = (
+                "1"
+                if hass.states.get(f"input_boolean.{device_name.replace(' ', '_')}_eco")
+                and hass.states.is_state(
+                    f"input_boolean.{device_name.replace(' ', '_')}_eco", "on"
+                )
+                else "0"
+            )
+            treinuno_value = (
+                "1"
+                if hass.states.get(
+                    f"input_boolean.{device_name.replace(' ', '_')}_3in1"
+                )
+                and hass.states.is_state(
+                    f"input_boolean.{device_name.replace(' ', '_')}_3in1", "on"
+                )
+                else "0"
+            )
+            extradry_value = (
+                "1"
+                if hass.states.get(
+                    f"input_boolean.{device_name.replace(' ', '_')}_extradry"
+                )
+                and hass.states.is_state(
+                    f"input_boolean.{device_name.replace(' ', '_')}_extradry", "on"
+                )
+                else "0"
+            )
+            startstop_value = (
+                "1"
+                if hass.states.get(
+                    f"input_boolean.{device_name.replace(' ', '_')}_startstop"
+                )
+                and hass.states.is_state(
+                    f"input_boolean.{device_name.replace(' ', '_')}_startstop", "on"
+                )
+                else "0"
+            )
+            metacarico_value = (
+                "1"
+                if hass.states.get(
+                    f"input_boolean.{device_name.replace(' ', '_')}_metacarico"
+                )
+                and hass.states.is_state(
+                    f"input_boolean.{device_name.replace(' ', '_')}_metacarico", "on"
+                )
+                else "0"
+            )
+
             # Call send_program with the extracted program value
             await hass.services.async_call(
                 DOMAIN,
@@ -128,6 +188,11 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                 {
                     "device_name": device_name,
                     "program": program_value,
+                    "eco": eco_value,
+                    "treinuno": treinuno_value,
+                    "extradry": extradry_value,
+                    "startstop": startstop_value,
+                    "metacarico": metacarico_value,
                 },
             )
         else:
@@ -202,4 +267,36 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             return encoded_data
         except Exception as e:
             _LOGGER.error(f"Encoding error: {e}")
+            return None
+
+    async def _decrypt_data(
+        self, hex_data: str, encrypted: bool, key: str
+    ) -> str | None:
+        """Decrypt the data using XOR decryption if enabled."""
+        _LOGGER.debug(f"Decoding data: {hex_data}, encrypted: {encrypted}")
+
+        if not encrypted:
+            _LOGGER.debug(f"Not encrypted")
+            return hex_data
+
+        if not key:
+            _LOGGER.error(f"Key is empty")
+            return None
+
+        try:
+            key_bytes = key.encode()
+            if len(hex_data) % 2 != 0:
+                _LOGGER.error(f"Odd length hex string before xor: {hex_data}")
+                return None
+            data_bytes = binascii.unhexlify(hex_data)
+            decrypted_data_bytes = bytearray()
+
+            for i, byte in enumerate(data_bytes):
+                decrypted_data_bytes.append(byte ^ key_bytes[i % len(key_bytes)])
+
+            decrypted_data = decrypted_data_bytes.decode("utf-8", errors="ignore")
+            _LOGGER.debug(f"Decoded data: {decrypted_data}")
+            return decrypted_data
+        except Exception as e:
+            _LOGGER.error(f"Decoding error: {e}")
             return None
