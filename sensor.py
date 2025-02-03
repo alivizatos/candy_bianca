@@ -103,6 +103,7 @@ class CandyBiancaSensor(CoordinatorEntity, SensorEntity):
     """Representation of a Candy Bianca sensor."""
 
     sensors_mapping = {}
+    _attr_device_class = None
 
     def __init__(
         self,
@@ -128,6 +129,9 @@ class CandyBiancaSensor(CoordinatorEntity, SensorEntity):
             f"Sensor initialized: {self._attr_name}, unique_id: {self._attr_unique_id}, sensor_type: {self._sensor_type}"
         )
         CandyBiancaSensor.sensors_mapping = sensors_mapping
+
+        if self._sensor_type == "Program" or self._sensor_type == "Pr":
+            self._attr_device_class = "program"
 
     async def async_set_program(self, program: str) -> None:
         """Set a new program to the appliance."""
@@ -329,6 +333,11 @@ class CandyBiancaSensor(CoordinatorEntity, SensorEntity):
     def native_value(self) -> StateType:
         """Return the state of the sensor."""
         return self._state
+
+    @property
+    def device_class(self) -> str | None:
+        """Return the device class of the sensor."""
+        return self._attr_device_class
 
     @property
     def available(self) -> bool:
