@@ -58,9 +58,13 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         if not raw_program:
             raise HomeAssistantError(f"Could not untranslate program value: {program}")
 
-        encoded_data = await _encode_data(raw_program, encrypted, key)
+        # Prepend "Program=" to the raw program
+        data_to_encode = f"Program={raw_program}"
+        _LOGGER.debug(f"Data to encode: {data_to_encode}")
+
+        encoded_data = await _encode_data(data_to_encode, encrypted, key)
         if not encoded_data:
-            raise HomeAssistantError(f"Could not encode data: {raw_program}")
+            raise HomeAssistantError(f"Could not encode data: {data_to_encode}")
 
         try:
             url = f"http://{ip_address}/http-write.json?encrypted=1&data={encoded_data}"
