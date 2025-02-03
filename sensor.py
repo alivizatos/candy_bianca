@@ -215,9 +215,9 @@ class CandyBiancaSensor(CoordinatorEntity, SensorEntity):
 
     def _update_state(self) -> None:
         """Update the sensor state from the coordinator data."""
-        _LOGGER.debug(
-            f"Updating state for: {self._attr_name}, sensor_type: {self._sensor_type}"
-        )
+        # _LOGGER.debug(
+        #     f"Updating state for: {self._attr_name}, sensor_type: {self._sensor_type}"
+        # )
         if self.coordinator.json_data:
             status_data = self.coordinator.json_data.get(self._device_type, {})
             self._state = status_data.get(self._sensor_type)
@@ -350,10 +350,10 @@ class CandyBiancaSensor(CoordinatorEntity, SensorEntity):
         self.async_on_remove(
             self.coordinator.async_add_listener(self._handle_coordinator_update)
         )
-        _LOGGER.debug(f"Listener added to coordinator: {self._attr_name}")
+        # _LOGGER.debug(f"Listener added to coordinator: {self._attr_name}")
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
-        _LOGGER.debug(f"Coordinator update received: {self._attr_name}")
+        # _LOGGER.debug(f"Coordinator update received: {self._attr_name}")
         self._update_state()
         self.async_write_ha_state()
