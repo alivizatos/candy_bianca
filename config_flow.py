@@ -59,7 +59,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 ): vol.In(
                     {
                         "statusDWash": "Dishwasher",
-                        "statusLavatrice": "Washing Machine",
+                        "statusLavatrice": "Clothes Washing Machine",
                     }
                 ),
                 vol.Optional(

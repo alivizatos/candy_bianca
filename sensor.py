@@ -38,49 +38,61 @@ async def async_setup_entry(
 
     sensors = []
 
-    common_sensors = {
-        "StatoWiFi": "Wifi Status",
-        "CodiceErrore": "Error Code",
-        "MetaCarico": "Half Load",
-        "StartStop": "Start/Stop",
-        "TreinUno": "3in1",
-        "Eco": "Eco Mode",
-        "Program": "Program",
-        "ExtraDry": "Extra Dry",
-        "OpenDoorOpt": "Open Door Option",
-        "DelayStart": "Delay Start",
-        "RemTime": "Remaining Time",
-        "MissSalt": "Salt Missing",
-        "MissRinse": "Rinse Missing",
-        "OpenDoor": "Door Open",
-        "Reset": "Reset",
-        "CheckUp": "Checkup",
-    }
-
     if device_type == "statusDWash":
-        device_sensors = {"StatoDWash": "Dishwasher Status"}
+        sensors_mapping = {
+            "StatoWiFi": "Wifi Status",
+            "CodiceErrore": "Error Code",
+            "MetaCarico": "Half Load",
+            "StartStop": "Start/Stop",
+            "TreinUno": "3in1",
+            "Eco": "Eco Mode",
+            "Program": "Program",
+            "ExtraDry": "Extra Dry",
+            "OpenDoorOpt": "Open Door Option",
+            "DelayStart": "Delay Start",
+            "RemTime": "Remaining Time",
+            "MissSalt": "Salt Missing",
+            "MissRinse": "Rinse Missing",
+            "OpenDoor": "Door Open",
+            "Reset": "Reset",
+            "CheckUp": "Checkup",
+            "StatoDWash": "Dishwasher Status",
+        }
+
     elif device_type == "statusLavatrice":
-        device_sensors = {
+        sensors_mapping = {
             "StatoLavatrice": "Washing Machine Status",
             "WiFiStatus": "Wifi Status",
             "Err": "Error Code",
+            "MachMd": "Machine Mode",
+            "Pr": "Program",
+            "PrPh": "Program Phase",
+            "PrCode": "Program Code",
             "SLevel": "Half Load",
+            "Temp": "Temperature",
+            "SpinSp": "Spin Speed",
             "Opt1": "3in1",
             "Opt2": "Eco Mode",
-            "Pr": "Program",
-            "DryT": "Extra Dry",
+            "Opt3": "Option 3",
+            "Opt4": "Option 4",
             "Opt5": "Open Door Option",
-            "DelVal": "Delay Start",
-            "RemTime": "Remaining Time",
             "Opt6": "Salt Missing",
             "Opt7": "Rinse Missing",
+            "Opt8": "Option 8",
             "Opt9": "Door Open",
+            "Steam": "Steam",
+            "DryT": "Extra Dry",
+            "DelVal": "Delay Start",
+            "RemTime": "Remaining Time",
+            "RecipeId": "Recipe ID",
+            "Lang": "Language",
+            "FillR": "Fill Result",
+            "DisTestOn": "Display Test On",
+            "DisTestRes": "Display Test Result",
             "CheckUpState": "Checkup",
         }
     else:
-        device_sensors = {}  # Handle the case when device_type is neither "statusDWash" nor "statusLavatrice"
-
-    sensors_mapping = {**common_sensors, **device_sensors}
+        sensors_mapping = {}
 
     for sensor_type, sensor_name in sensors_mapping.items():
         sensors.append(
@@ -103,6 +115,7 @@ class CandyBiancaSensor(CoordinatorEntity, SensorEntity):
     """Representation of a Candy Bianca sensor."""
 
     sensors_mapping = {}
+    _attr_device_class = None
 
     def __init__(
         self,
@@ -128,6 +141,9 @@ class CandyBiancaSensor(CoordinatorEntity, SensorEntity):
             f"Sensor initialized: {self._attr_name}, unique_id: {self._attr_unique_id}, sensor_type: {self._sensor_type}"
         )
         CandyBiancaSensor.sensors_mapping = sensors_mapping
+
+        if self._sensor_type == "Program" or self._sensor_type == "Pr":
+            self._attr_device_class = "program"
 
     async def async_set_program(self, program: str) -> None:
         """Set a new program to the appliance."""
@@ -211,100 +227,145 @@ class CandyBiancaSensor(CoordinatorEntity, SensorEntity):
 
     def _update_state(self) -> None:
         """Update the sensor state from the coordinator data."""
-        _LOGGER.debug(
-            f"Updating state for: {self._attr_name}, sensor_type: {self._sensor_type}"
-        )
         if self.coordinator.json_data:
             status_data = self.coordinator.json_data.get(self._device_type, {})
-            self._state = status_data.get(self._sensor_type)
+            #            _LOGGER.debug(f"Raw JSON data for {self._device_type}: {status_data}")
 
-            if self._sensor_type == "StatoWiFi" or self._sensor_type == "WiFiStatus":
-                if self._state == "1":
-                    self._state = "Remote Control"
-                elif self._state == "0":
-                    self._state = "No Remote Control"
-                else:
-                    self._state = "Unknown"
-            if self._sensor_type == "CodiceErrore" or self._sensor_type == "Err":
-                if self._state == "0" or self._state == "E0":
-                    self._state = "Healthy"
-                else:
-                    self._state = "Error"
-            if self._sensor_type == "StatoDWash":
-                states = {
-                    "0": "IDLE",
-                    "1": "PRE_WASH",
-                    "2": "WASH",
-                    "3": "RINSE",
-                    "4": "DRYING",
-                    "5": "FINISHED",
-                }
-                self._state = states.get(self._state, self._state)
-            if self._sensor_type == "StatoLavatrice" or self._sensor_type == "MachMd":
-                states = {
-                    "0": "IDLE",
-                    "1": "PRE_WASH",
-                    "2": "WASH",
-                    "3": "RINSE",
-                    "4": "SPIN",
-                    "5": "FINISHED",
-                }
-                self._state = states.get(self._state, self._state)
-            if self._sensor_type == "MissSalt" or self._sensor_type == "Opt6":
-                if self._state == "0":
-                    self._state = "Salt OK"
-                elif self._state == "1":
-                    self._state = "Salt Missing"
-            if self._sensor_type == "MissRinse" or self._sensor_type == "Opt7":
-                if self._state == "0":
-                    self._state = "Rinse OK"
-                elif self._state == "1":
-                    self._state = "Rinse Missing"
-            if self._sensor_type == "TreinUno" or self._sensor_type == "Opt1":
-                if self._state == "0":
-                    self._state = "Disabled"
-                elif self._state == "1":
-                    self._state = "Enabled"
-            if self._sensor_type == "Eco" or self._sensor_type == "Opt2":
-                if self._state == "0":
-                    self._state = "Disabled"
-                elif self._state == "1":
-                    self._state = "Enabled"
-            if self._sensor_type == "ExtraDry" or self._sensor_type == "DryT":
-                if self._state == "0":
-                    self._state = "Disabled"
-                elif self._state == "1":
-                    self._state = "Enabled"
-            if self._sensor_type == "OpenDoor" or self._sensor_type == "Opt9":
-                if self._state == "0":
-                    self._state = "Closed"
-                elif self._state == "1":
-                    self._state = "Open"
-            if self._sensor_type == "MetaCarico" or self._sensor_type == "SLevel":
-                if self._state == "0":
-                    self._state = "Full Load"
-                elif self._state == "1":
-                    self._state = "Half Load"
-            if self._sensor_type == "Program" or self._sensor_type == "Pr":
-                if self._state == "P19":
-                    self._state = "Zoom 39mins 60°C"
-                elif self._state == "P2":
-                    self._state = "P1 75°C"
-                elif self._state == "P5":
-                    self._state = "Universal 60°C"
-                elif self._state == "P8":
-                    self._state = "ECO 45°C"
-                elif self._state == "P12":
-                    self._state = "PreWash 5mins"
-            if self._sensor_type == "RemTime":
-                try:
-                    minutes = int(self._state)
-                    hours = minutes // 60
-                    minutes_rem = minutes % 60
-                    self._state = f"{hours} hours {minutes_rem} minutes"
-                except (ValueError, TypeError):
-                    _LOGGER.error(f"Error converting RemTime value: {self._state}")
-                    self._state = "Error"
+            if self._device_type == "statusDWash":
+                self._state = status_data.get(self._sensor_type)
+                #                _LOGGER.debug(f"Sensor: {self._sensor_type}, Raw Value: {self._state}")  # Debug for translation
+
+                if self._sensor_type == "StatoWiFi":
+                    if self._state == "1":
+                        self._state = "Remote Control"
+                    elif self._state == "0":
+                        self._state = "No Remote Control"
+                    else:
+                        self._state = "Unknown"
+                if self._sensor_type == "CodiceErrore":
+                    if self._state == "0" or self._state == "E0":
+                        self._state = "Healthy"
+                    else:
+                        self._state = "Error"
+                if self._sensor_type == "StatoDWash":
+                    states = {
+                        "0": "IDLE",
+                        "1": "PRE_WASH",
+                        "2": "WASH",
+                        "3": "RINSE",
+                        "4": "DRYING",
+                        "5": "FINISHED",
+                    }
+                    self._state = states.get(self._state, self._state)
+                if self._sensor_type == "MissSalt":
+                    if self._state == "0":
+                        self._state = "Salt OK"
+                    elif self._state == "1":
+                        self._state = "Salt Missing"
+                if self._sensor_type == "MissRinse":
+                    if self._state == "0":
+                        self._state = "Rinse OK"
+                    elif self._state == "1":
+                        self._state = "Rinse Missing"
+                if self._sensor_type == "TreinUno":
+                    if self._state == "0":
+                        self._state = "Disabled"
+                    elif self._state == "1":
+                        self._state = "Enabled"
+                if self._sensor_type == "Eco":
+                    if self._state == "0":
+                        self._state = "Disabled"
+                    elif self._state == "1":
+                        self._state = "Enabled"
+                if self._sensor_type == "ExtraDry":
+                    if self._state == "0":
+                        self._state = "Disabled"
+                    elif self._state == "1":
+                        self._state = "Enabled"
+                if self._sensor_type == "OpenDoor":
+                    if self._state == "0":
+                        self._state = "Closed"
+                    elif self._state == "1":
+                        self._state = "Open"
+                if self._sensor_type == "MetaCarico":
+                    if self._state == "0":
+                        self._state = "Full Load"
+                    elif self._state == "1":
+                        self._state = "Half Load"
+                if self._sensor_type == "Program":
+                    if self._state == "P19":
+                        self._state = "Zoom 39mins 60°C"
+                    elif self._state == "P2":
+                        self._state = "P1 75°C"
+                    elif self._state == "P5":
+                        self._state = "Universal 60°C"
+                    elif self._state == "P8":
+                        self._state = "ECO 45°C"
+                    elif self._state == "P12":
+                        self._state = "PreWash 5mins"
+                if self._sensor_type == "RemTime":
+                    try:
+                        minutes = int(self._state)
+                        hours = minutes // 60
+                        minutes_rem = minutes % 60
+                        self._state = f"{hours} hours {minutes_rem} minutes"
+                    except (ValueError, TypeError):
+                        _LOGGER.error(f"Error converting RemTime value: {self._state}")
+                        self._state = "Error"
+
+            # Update state for statusLavatrice
+            elif self._device_type == "statusLavatrice":
+                self._state = status_data.get(self._sensor_type)
+                _LOGGER.debug(
+                    f"Sensor: {self._sensor_type}, Raw Value: {self._state}"
+                )  # Debug for translation
+
+                if self._sensor_type == "WiFiStatus":
+                    if self._state == "0":
+                        self._state = "No Remote Control"
+                    elif self._state == "1":
+                        self._state = "Remote Control"
+                    else:
+                        self._state = "Unknown"
+                if self._sensor_type == "Err":
+                    if self._state == "0":
+                        self._state = "No errors"
+                    else:
+                        self._state = "Error"
+                if self._sensor_type == "MachMd":
+                    states = {
+                        "1": "Idle",
+                        "2": "Running",
+                        "3": "Paused",
+                        "4": "Delayed Start Selection",
+                        "5": "Delayed Start Programmed",
+                        "6": "Error",
+                        "7": "Finished1",
+                        "8": "Finished2",
+                    }
+                    self._state = states.get(self._state, self._state)
+                if self._sensor_type == "PrPh":
+                    states = {
+                        "0": "Stopped",
+                        "1": "Prewash",
+                        "2": "Wash",
+                        "3": "Rinse",
+                        "4": "Last Rinse",
+                        "5": "End",
+                        "6": "Drying",
+                        "7": "Error",
+                        "8": "Steam",
+                        "9": "Good Night",
+                        "10": "Spin",
+                    }
+                    self._state = states.get(self._state, self._state)
+                if self._sensor_type == "SLevel":
+                    self._state = self._state
+                if self._sensor_type == "Temp":
+                    self._state = self._state + "°C"
+
+                if self._sensor_type == "SpinSp":
+                    self._state = str(int(self._state) * 100) + " RPM"
 
             if (
                 self._sensor_type not in self.sensors_mapping
@@ -331,6 +392,11 @@ class CandyBiancaSensor(CoordinatorEntity, SensorEntity):
         return self._state
 
     @property
+    def device_class(self) -> str | None:
+        """Return the device class of the sensor."""
+        return self._attr_device_class
+
+    @property
     def available(self) -> bool:
         """Return if entity is available."""
         return self.coordinator.last_update_success
@@ -341,10 +407,10 @@ class CandyBiancaSensor(CoordinatorEntity, SensorEntity):
         self.async_on_remove(
             self.coordinator.async_add_listener(self._handle_coordinator_update)
         )
-        _LOGGER.debug(f"Listener added to coordinator: {self._attr_name}")
+        # _LOGGER.debug(f"Listener added to coordinator: {self._attr_name}")
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
-        _LOGGER.debug(f"Coordinator update received: {self._attr_name}")
+        # _LOGGER.debug(f"Coordinator update received: {self._attr_name}")
         self._update_state()
         self.async_write_ha_state()
