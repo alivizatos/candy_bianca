@@ -207,11 +207,9 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         if device_type == "statusDWash":
             program_mapping = {
                 "Zoom 39mins 60°C": "P19",
-                "P1 75°C": "P2",
+                "Intensive 75°C": "P2",
                 "Universal 60°C": "P5",
-                "ECO 45°C": "P8",
                 "PreWash 5mins": "P12",
-                "Pre-Wash": "P12",
                 "Eco 45°C": "P8",
             }
         elif device_type == "statusLavatrice":
@@ -284,7 +282,6 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             decrypted_data = decrypted_data_bytes.decode("utf-8", errors="ignore")
             _LOGGER.debug(f"Decoded data: {decrypted_data}")
             return decrypted_data
-
         except Exception as e:
             _LOGGER.error(f"Decoding error: {e}")
             return None
