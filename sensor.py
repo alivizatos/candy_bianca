@@ -245,6 +245,8 @@ class CandyBiancaSensor(CoordinatorEntity, SensorEntity):
                 if self._sensor_type == "CodiceErrore":
                     if self._state == "0" or self._state == "E0":
                         self._state = "Healthy"
+                    elif self._state == "E2":
+                        self._state = "No Water Input"
                     else:
                         self._state = "Error"
                 if self._sensor_type == "StatoDWash":
